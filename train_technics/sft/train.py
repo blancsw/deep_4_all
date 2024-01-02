@@ -2,6 +2,7 @@ from datasets import load_dataset
 from transformers import AutoModelForCausalLM, TrainingArguments, AutoTokenizer, PreTrainedTokenizerFast
 from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
 
+# transformers/models/opt/modeling_opt.py:OPTForCausalLM:forward
 model = AutoModelForCausalLM.from_pretrained("facebook/opt-350m",
                                              device_map="cuda")
 
