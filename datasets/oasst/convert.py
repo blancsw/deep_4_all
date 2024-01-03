@@ -1,12 +1,12 @@
 from typing import Literal, Optional
 
+import datasets
 from torch import Generator
 from torch.utils.data import Dataset
 
 from oasst_data import ExportMessageNode, visit_threads_depth_first
 from oasst_data import read_dataset_message_trees
 from oasst_data.formating import Utterance, DatasetEntrySft, Role
-import datasets
 
 
 class ListDataset(Dataset):
@@ -23,19 +23,31 @@ class ListDataset(Dataset):
 
 def load_oasst_export(
         hf_dataset_name: Optional[str] = "OpenAssistant/oasst2",
-        lang: str = "*",
+        lang: str = "fr,en,de,es,it",
         top_k: Optional[int] = None,
         manual_seed: int = 287631038922,
         mode: Literal["sft", "rm", "rl"] = "sft",
 ) -> ListDataset:
     """
+    :param hf_dataset_name: Optional[str] = "OpenAssistant/oasst2"
+        The name of the Hugging Face dataset to load the oasst export from. Defaults to "OpenAssistant/oasst2".
 
-    :param hf_dataset_name:
-    :param lang:
-    :param top_k: Get Top K conversations for each threads, Top 1 mean take the best conversation
-    :param manual_seed:
-    :param mode:
-    :return:
+    :param lang: str = "fr,en,de,es,it"
+        Comma-separated list of languages to include in the export. Or "*" for all languages. Defaults to "fr,en,de,es,it".
+
+    :param top_k: Optional[int] = None
+        Top k thread to export, 1 mean export top thread quality. Defaults to None, which includes all replies.
+
+    :param manual_seed: int = 287631038922
+        The manual seed to use for the random number generator.
+
+    :param mode: Literal["sft", "rm", "rl"] = "sft"
+        The mode for processing the export. Must be one of "sft" (supervised fine-tuning), "rm" (Reward Models), or "rl" (Reinforcement Learning).
+
+    :return: ListDataset
+        The processed oasst export data as a ListDataset, containing either DatasetEntrySft or tuples of prefix and replies
+        based on the specified mode.
+
     """
     if mode not in ("sft", "rm", "rl"):
         raise ValueError(f"Unknown dataset mode: {mode}")

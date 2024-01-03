@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable, TextIO
 
-from oasst_data.schemas import ExportMessageNode, ExportMessageTree
+from .schemas import ExportMessageNode, ExportMessageTree
 
 
 def default_serializer(obj):
