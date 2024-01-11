@@ -2,4 +2,5 @@ plotly
 scikit-learn
 spacy
 torchtext
+datasets
 portalocker
