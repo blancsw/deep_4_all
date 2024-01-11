@@ -1,0 +1,5 @@
+plotly
+scikit-learn
+spacy
+torchtext
+portalocker
