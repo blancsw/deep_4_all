@@ -4,3 +4,4 @@ spacy
 torchtext
 datasets
 portalocker
+opencv-python
