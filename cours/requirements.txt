@@ -6,6 +6,7 @@ datasets
 portalocker
 opencv-python
 matplotlib
+transformers
 --extra-index-url https://download.pytorch.org/whl/cu121
 torch
 torchvision
