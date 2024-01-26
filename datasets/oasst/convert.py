@@ -61,8 +61,9 @@ def load_oasst_export(
     tree_iter = read_dataset_message_trees(hf_dataset_name, split="train+validation")
     threads_per_tree = []
     for tree in tree_iter:
+        tree_lang = tree.prompt.lang
         if tree.tree_state != "ready_for_export" or not tree.prompt.review_result or (
-                not all_langs and tree.prompt.lang not in lang_codes):
+                not all_langs and tree_lang not in lang_codes):
             continue
 
         if mode in ("sft", "rm"):
@@ -163,8 +164,10 @@ def load_oasst_export(
 if __name__ == "__main__":
     dataset = load_oasst_export(top_k=1)
     formated = []
+    langs = []
     for conversation in dataset.data:
         formated.append(conversation.get_formatted())
+        langs.append(conversation.conversation[0].lang)
 
-    ds = datasets.Dataset.from_dict({"conversation": formated})
-    ds.push_to_hub("blancsw/oasst2_top1_chat_format")
+    ds = datasets.Dataset.from_dict({"conversation": formated, "langs": langs})
+    ds.push_to_hub("blancsw/oasst2_top1_chat_format", commit_message="Add Lang column")
