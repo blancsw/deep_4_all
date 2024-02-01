@@ -1,5 +1,16 @@
 # SFT memo
 
+## SFT de base 
+
+Le dataloader `DataCollatorForLanguageModeling`
+
+Input: Prompt d'entrée
+Labels: Prompt d'entrée
+
+SFT trainer et juste une class qui utilise les models du type `AutoModelForCausalLM`
+
+## SFT Train
+
 L'idée et que le model predise ce que doit dire le bot
 
 En input le prompt du user, en output ce que doit dire le bot
@@ -73,3 +84,4 @@ class CrossEntropyLoss(nn.CrossEntropyLoss):
             return loss
         return loss.sum() / (size + 1e-8)
 ````
+
