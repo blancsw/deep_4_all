@@ -1,6 +1,7 @@
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, TrainingArguments, AutoTokenizer, PreTrainedTokenizerFast
 from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
+from accelerate import notebook_launcher
 
 # transformers/models/opt/modeling_opt.py:OPTForCausalLM:forward
 model = AutoModelForCausalLM.from_pretrained("facebook/opt-350m",
@@ -43,9 +44,3 @@ trainer = SFTTrainer(
 )
 
 trainer.train()
-
-"""
-from transformers import AutoModelForCausalLM, TrainingArguments, AutoTokenizer, PreTrainedTokenizerFast
-tokenizer: PreTrainedTokenizerFast = AutoTokenizer.from_pretrained("facebook/opt-350m")
-tokenizer.decode(labels[0])
-"""
