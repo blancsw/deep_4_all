@@ -1,0 +1,4 @@
+transformers==4.36.2
+sentencepiece==0.1.99
+accelerate==0.25.0
+optimum==1.16.1
