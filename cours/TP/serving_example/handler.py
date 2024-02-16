@@ -45,7 +45,6 @@ class LangDetection(BaseHandler, ABC):
         """
         PYTHON_LOGGER.info("Start loading xlm-roberta-base-language-detection")
         model = AutoModelForSequenceClassification.from_pretrained("papluca/xlm-roberta-base-language-detection")
-        model = BetterTransformer.transform(model)
         tokenizer = AutoTokenizer.from_pretrained("papluca/xlm-roberta-base-language-detection")
         model.eval()
 
