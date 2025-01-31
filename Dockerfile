@@ -17,7 +17,7 @@ RUN apt update \
 && apt-get update \
 && apt-get install -y --no-install-recommends python${PY_VERSION} python${PY_VERSION}-dev python${PY_VERSION}-venv \
 && update-alternatives --install /usr/bin/python python /usr/bin/python${PY_VERSION} 1 \
-&& update-alternatives --config python \
+&& update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PY_VERSION} 1 \
 && apt-get clean \
 && rm -rf /var/lib/apt/lists/* # remove package lists to save space
 
@@ -29,6 +29,8 @@ RUN wget https://bootstrap.pypa.io/get-pip.py \
 
 RUN pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
 RUN pip install ninja psutil && pip install flash-attn --no-build-isolation
+RUN pip install jupyter ipywidgets
+RUN pip install transformers bitsandbytes peft accelerate scikit-learn
 
 WORKDIR /root
 
