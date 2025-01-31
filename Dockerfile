@@ -32,6 +32,26 @@ RUN pip install ninja psutil && pip install flash-attn --no-build-isolation
 RUN pip install jupyter ipywidgets
 RUN pip install transformers bitsandbytes peft accelerate scikit-learn
 
+RUN apt update \
+&& apt install -y \
+    build-essential \
+    cmake \
+    libgtk-3-dev \
+    libcanberra-gtk3-module \
+    libjpeg8-dev \
+    libpng-dev \
+    libtiff-dev \
+    libavcodec-dev \
+    libavformat-dev \
+    libswscale-dev \
+    libv4l-dev \
+    libxvidcore-dev \
+    libx264-dev \
+    libopenexr-dev \
+    libatlas-base-dev \
+    gfortran \
+    libgl1
+RUN pip install opencv-contrib-python
 WORKDIR /root
 
 # Set up entrypoint and user for running
