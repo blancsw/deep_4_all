@@ -18,21 +18,6 @@ RUN apt update \
 && apt-get install -y --no-install-recommends python${PY_VERSION} python${PY_VERSION}-dev python${PY_VERSION}-venv \
 && update-alternatives --install /usr/bin/python python /usr/bin/python${PY_VERSION} 1 \
 && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PY_VERSION} 1 \
-&& apt-get clean \
-&& rm -rf /var/lib/apt/lists/* # remove package lists to save space
-
-# Install pip and poetry. Use ensurepip for robustness and install pipx
-RUN wget https://bootstrap.pypa.io/get-pip.py \
-    && python get-pip.py \
-    && pip install --upgrade pip \
-    && pip install --upgrade setuptools packaging
-
-RUN pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
-RUN pip install ninja psutil && pip install flash-attn --no-build-isolation
-RUN pip install jupyter ipywidgets
-RUN pip install transformers bitsandbytes peft accelerate scikit-learn
-
-RUN apt update \
 && apt install -y \
     build-essential \
     cmake \
@@ -50,9 +35,21 @@ RUN apt update \
     libopenexr-dev \
     libatlas-base-dev \
     gfortran \
-    libgl1
-RUN pip install opencv-contrib-python
+    libgl1 \
+&& apt-get clean \
+&& rm -rf /var/lib/apt/lists/* # remove package lists to save space
+
+RUN wget https://bootstrap.pypa.io/get-pip.py \
+    && python get-pip.py \
+    && pip install --upgrade pip \
+    && pip install --upgrade setuptools packaging
+
 WORKDIR /root
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+RUN pip install flash-attn --no-build-isolation
+
 
 # Set up entrypoint and user for running
 ENTRYPOINT ["/bin/bash"]
