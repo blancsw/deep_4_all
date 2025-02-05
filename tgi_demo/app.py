@@ -10,9 +10,9 @@ import gradio as gr
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="http://localhost:8080/v1",
-    api_key="_",
-)
+        base_url="http://localhost:8080/v1",
+        api_key="_",
+        )
 
 
 def image_to_base64(image_path):
@@ -28,48 +28,49 @@ def image_to_base64(image_path):
     return f"data:{mime_type};base64,{encoded_string}"
 
 
-def chat_with_llm(message, history):
+# Chat function updated to take additional parameters
+def chat_with_llm(message, history, temperature, top_p, presence_penalty, frequency_penalty):
     messages = []
     files = []
 
     for couple in history:
-        if type(couple[0]) is tuple:
-            mime_type, _ = mimetypes.guess_type(couple[0][0])
+        if type(couple["content"]) is tuple:
+            mime_type, _ = mimetypes.guess_type(couple["content"][0])
             if mime_type and mime_type.startswith('image/'):
                 messages.append({
-                    "role": "user",
+                    "role":    "user",
                     "content": [{
-                        "type": "image_url",
+                        "type":      "image_url",
                         "image_url": {
-                            "url": image_to_base64(couple[0][0])
-                        }
-                    }]
-                })
-        elif isinstance(couple[0], str):
-            user, bot = couple
-            messages.append({"role": "user", "content": user})
-            messages.append({"role": "assistant", "content": bot})
+                            "url": image_to_base64(couple["content"][0])
+                            }
+                        }]
+                    })
+        elif isinstance(couple["content"], str):
+            messages.append({"role": couple["role"], "content": couple["content"]})
 
     for file in message["files"]:
-        mime_type, _ = mimetypes.guess_type(file["path"])
+        mime_type, _ = mimetypes.guess_type(file)
         if mime_type and mime_type.startswith('image/'):
             files.append({
-                "type": "image_url",
-                "image_url": {
-                    "url": image_to_base64(file["path"])
-                }
-            })
+                "type":      "image_url",
+                "image_url": {"url": image_to_base64(file)}
+                })
     if len(files) > 0:
         messages.append({"role": "user", "content": [{"type": "text", "text": message["text"]}] + files})
     else:
         messages.append({"role": "user", "content": message["text"]})
 
     chat_completion = client.chat.completions.create(
-        model="HuggingFaceTB/SmolVLM-256M-Instruct",
-        stream=True,
-        messages=messages,
-        max_tokens=1024
-    )
+            model="HuggingFaceTB/SmolVLM-256M-Instruct",
+            stream=True,
+            messages=messages,
+            presence_penalty=presence_penalty,
+            frequency_penalty=frequency_penalty,
+            top_p=top_p,
+            temperature=temperature,
+            max_tokens=1024
+            )
     partial_message = ""
     for token in chat_completion:
         content = token.choices[0].delta.content
@@ -79,23 +80,36 @@ def chat_with_llm(message, history):
         yield partial_message
 
 
-chat_interface = gr.ChatInterface(
-    fn=chat_with_llm,
-    multimodal=True,
-    examples=[
-        {
-            "text": "Classify this document from this labels: bill, form, id, resume\nOnly return the label in this format\n\nlabel:",
-            "files": ["bill.jpg"]
-        },
-        {
-            "text": "Classify this document from this labels: bill, form, id, resume\nOnly return the label in this format\n\nlabel:",
-            "files": ["resume.jpg"]
-        },
-        {
-            "text": "Expliquer les principales différences des cartes graphiques",
-            "files": ["2.png"]
-        }
-    ],
-)
+# Updated Gradio interface with sliders
+chat_interface = gr.Interface(
+        fn=chat_with_llm,
+        inputs=[
+            gr.Textbox(
+                    label="Message",
+                    placeholder="Enter your message here..."
+                    ),
+            gr.State([]),  # History
+            gr.Slider(0.1, 1.0, value=0.3, step=0.1, label="Temperature"),
+            gr.Slider(0.0, 1.0, value=1.0, step=0.1, label="Top P"),
+            gr.Slider(-2.0, 2.0, value=-0.8, step=0.1, label="Presence Penalty"),
+            gr.Slider(-2.0, 2.0, value=0.0, step=0.1, label="Frequency Penalty")
+            ],
+        outputs=[
+            gr.Chatbot(label="Chatbot Response"),
+            ],
+        live=True,
+        examples=[
+            {
+                "inputs": [
+                    "Classify this document from this labels: bill, form, id, resume\nOnly return the label in this format\n\nlabel:",
+                    [],
+                    0.3,
+                    1.0,
+                    -0.8,
+                    0.0
+                    ]
+                }
+            ]
+        )
 
 chat_interface.launch()
