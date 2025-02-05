@@ -115,3 +115,6 @@ def main():
             train_dataset=train_ds,
             )
     trainer.train()
+
+if __name__ == "__main__":
+    main()

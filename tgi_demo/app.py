@@ -8,11 +8,9 @@ import mimetypes
 
 import gradio as gr
 from openai import OpenAI
+from huggingface_hub import InferenceClient
 
-client = OpenAI(
-        base_url="http://localhost:8080/v1",
-        api_key="_",
-        )
+client = InferenceClient("http://localhost:8080")
 
 
 def image_to_base64(image_path):
@@ -65,10 +63,6 @@ def chat_with_llm(message, history, temperature, top_p, presence_penalty, freque
             model="HuggingFaceTB/SmolVLM-256M-Instruct",
             stream=True,
             messages=messages,
-            presence_penalty=presence_penalty,
-            frequency_penalty=frequency_penalty,
-            top_p=top_p,
-            temperature=temperature,
             max_tokens=1024
             )
     partial_message = ""
@@ -80,36 +74,25 @@ def chat_with_llm(message, history, temperature, top_p, presence_penalty, freque
         yield partial_message
 
 
-# Updated Gradio interface with sliders
-chat_interface = gr.Interface(
+chat_interface = gr.ChatInterface(
         fn=chat_with_llm,
-        inputs=[
-            gr.Textbox(
-                    label="Message",
-                    placeholder="Enter your message here..."
-                    ),
-            gr.State([]),  # History
-            gr.Slider(0.1, 1.0, value=0.3, step=0.1, label="Temperature"),
-            gr.Slider(0.0, 1.0, value=1.0, step=0.1, label="Top P"),
-            gr.Slider(-2.0, 2.0, value=-0.8, step=0.1, label="Presence Penalty"),
-            gr.Slider(-2.0, 2.0, value=0.0, step=0.1, label="Frequency Penalty")
-            ],
-        outputs=[
-            gr.Chatbot(label="Chatbot Response"),
-            ],
-        live=True,
+        multimodal=True,
+        type='messages',
         examples=[
             {
-                "inputs": [
-                    "Classify this document from this labels: bill, form, id, resume\nOnly return the label in this format\n\nlabel:",
-                    [],
-                    0.3,
-                    1.0,
-                    -0.8,
-                    0.0
-                    ]
+                "text":  "Classify this document from this labels: bill, form, id, resume\nOnly return the label in this format\n\nlabel:",
+                "files": ["bill.jpg"]
+                },
+            {
+                "text":  "Classify this document from this labels: bill, form, id, resume\nOnly return the label in this format\n\nlabel:",
+                "files": ["resume.jpg"]
+                },
+            {
+                "text":  "Expliquer les principales différences des cartes graphiques",
+                "files": ["2.png"]
                 }
-            ]
+            ],
         )
 
 chat_interface.launch()
+

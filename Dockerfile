@@ -18,7 +18,7 @@ RUN apt update \
 && apt-get install -y --no-install-recommends python${PY_VERSION} python${PY_VERSION}-dev python${PY_VERSION}-venv \
 && update-alternatives --install /usr/bin/python python /usr/bin/python${PY_VERSION} 1 \
 && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PY_VERSION} 1 \
-&& apt install -y \
+&& sudo apt install -y \
     build-essential \
     cmake \
     libgtk-3-dev \
@@ -46,9 +46,13 @@ RUN wget https://bootstrap.pypa.io/get-pip.py \
 
 WORKDIR /root
 
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-RUN pip install flash-attn --no-build-isolation
+
+RUN pip install --no-cache-dir "poetry>=2.0.0,<3.0.0"
+COPY pyproject.toml .
+COPY poetry.lock .
+RUN poetry config virtualenvs.create false && \
+    poetry config virtualenvs.in-project false && \
+    poetry install -n
 
 
 # Set up entrypoint and user for running
