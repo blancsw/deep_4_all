@@ -82,6 +82,10 @@ from sklearn.metrics import classification_report
 print(classification_report(y_test, np.around(preds)))
 ```
 
+## Loss overfit
+
+![loss](./loss_overfit.png)
+
 ---
 
 ## Ressources supplémentaires

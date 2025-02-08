@@ -28,7 +28,9 @@ dependencies = [
     "jupyterlab-rise",
     "openai",
     "gradio (>=5.15.0,<6.0.0)",
-    "pillow"
+    "pillow",
+    "trl (>=0.14.0,<0.15.0)",
+    "wandb (>=0.19.6,<0.20.0)"
 ]
 
 [build-system]
