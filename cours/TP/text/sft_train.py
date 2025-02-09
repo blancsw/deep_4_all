@@ -1,10 +1,11 @@
 import gc
+import os
 
 import torch
 from accelerate import PartialState
 from datasets import load_dataset
 from peft import LoraConfig
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, is_torch_xpu_available, is_torch_npu_available
 from trl import SFTConfig, SFTTrainer, DataCollatorForCompletionOnlyLM
 
 # Specify the checkpoint for SmolLM2
@@ -87,9 +88,7 @@ def main():
                     run_name=f"train-{OUTPUT_DIR}",
                     report_to="wandb",
                     save_steps=31,
-                    save_total_limit=4,
-                    # This flag is recommended for DDP training to avoid errors when not all parameters are used.
-                    ddp_find_unused_parameters=False),
+                    save_total_limit=4),
             peft_config=LoraConfig(
                     r=16,
                     lora_alpha=32,
@@ -106,17 +105,20 @@ def main():
     trainer.train()
 
     # Optionally, you can save the fine-tuned LoRA adaptor:
-    """
     trainer.model.save_pretrained(os.path.join(OUTPUT_DIR, "final_checkpoint"))
     del model
-    torch.cuda.empty_cache()
+    if is_torch_xpu_available():
+        torch.xpu.empty_cache()
+    elif is_torch_npu_available():
+        torch.npu.empty_cache()
+    else:
+        torch.cuda.empty_cache()
     from peft import AutoPeftModelForCausalLM
     model = AutoPeftModelForCausalLM.from_pretrained(OUTPUT_DIR, device_map="auto", torch_dtype=torch.bfloat16)
     model = model.merge_and_unload()
 
     output_merged_dir = os.path.join(OUTPUT_DIR, "final_merged_checkpoint")
     model.save_pretrained(output_merged_dir, safe_serialization=True)
-    """
 
 
 if __name__ == "__main__":
