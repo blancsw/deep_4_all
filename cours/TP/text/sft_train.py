@@ -1,5 +1,7 @@
 import gc
 import os
+import argparse
+import yaml
 
 import torch
 from accelerate import PartialState
@@ -8,17 +10,12 @@ from peft import LoraConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer, is_torch_xpu_available, is_torch_npu_available
 from trl import SFTConfig, SFTTrainer, DataCollatorForCompletionOnlyLM
 
-# Specify the checkpoint for SmolLM2
-CHECKPOINT = "HuggingFaceTB/SmolLM2-135M-Instruct"
-# Define output directory based on the checkpoint name
-OUTPUT_DIR = CHECKPOINT.split("/")[-1] + "-structure-output"
-# Define template for prompts
-RESPONSE_TEMPLATE = "<|im_start|>assistant\n"
-INSTRUCTION_TEMPLATE = "<|im_start|>user\n"
-PROMPT_TEMPLATE = """Query: {query}
 
-schema:
-{schema}"""
+def load_config(config_file):
+    """Load YAML configuration file."""
+    with open(config_file, 'r') as f:
+        config = yaml.safe_load(f)
+    return config
 
 
 def clear_hardwares():
@@ -29,17 +26,45 @@ def clear_hardwares():
 
 
 def main():
+    # Parse command-line arguments to obtain the path to the config file.
+    parser = argparse.ArgumentParser(description="Train model with hyperparameters in a config file")
+    parser.add_argument("--config", type=str, default="config.yaml", help="Path to config file")
+    args = parser.parse_args()
 
-    # Load dataset and perform Train-Test Split
-    ds = load_dataset("ChristianAzinn/json-training")
-    split_ds = ds["train"].train_test_split(test_size=0.2, seed=42)
+    # Load configuration file
+    config = load_config(args.config)
+
+    # ---------------------
+    # Load Hyperparameters
+    # ---------------------
+
+    # Model checkpoint
+    CHECKPOINT = config["checkpoint"]
+
+    # Dataset configuration
+    dataset_name = config.get("dataset_name", "ChristianAzinn/json-training")
+    test_size = config.get("train_test_split", 0.2)
+    random_seed = config.get("random_seed", 42)
+
+    # Prompt templates
+    RESPONSE_TEMPLATE = config["templates"]["response"]
+    INSTRUCTION_TEMPLATE = config["templates"]["instruction"]
+    PROMPT_TEMPLATE = config["templates"]["prompt"]
+
+    # Load the dataset and create a train/test split
+    ds = load_dataset(dataset_name)
+    split_ds = ds["train"].train_test_split(test_size=test_size, seed=random_seed)
     train_dataset = split_ds["train"]
     test_dataset = split_ds["test"]
 
+    # Load tokenizer and model from the checkpoint
     tokenizer = AutoTokenizer.from_pretrained(CHECKPOINT)
-    model = AutoModelForCausalLM.from_pretrained(CHECKPOINT,
-                                                 device_map={"": PartialState().process_index}, )
-    # Data collator for training
+    model = AutoModelForCausalLM.from_pretrained(
+            CHECKPOINT,
+            device_map={"": PartialState().process_index},
+            )
+
+    # Data collator for training that uses the specified templates
     collator = DataCollatorForCompletionOnlyLM(
             response_template=RESPONSE_TEMPLATE,
             instruction_template=INSTRUCTION_TEMPLATE,
@@ -47,6 +72,7 @@ def main():
             mlm=False
             )
 
+    # Define the function to format the prompts for each training example.
     def formatting_prompts_func(example):
         output_texts = []
         for i in range(len(example["query"])):
@@ -65,47 +91,48 @@ def main():
             output_texts.append(text)
         return output_texts
 
+    # ---------------------------
+    # Configure Training Settings
+    # ---------------------------
+
+    # Get SFT configuration from the config file
+    sft_config_dict = config.get("sft_config", {})
+    # If 'output_dir' is not provided, compute it based on the checkpoint name.
+    if not sft_config_dict.get("output_dir"):
+        OUTPUT_DIR = CHECKPOINT.split("/")[-1] + "-structure-output"
+        sft_config_dict["output_dir"] = "./" + OUTPUT_DIR
+    else:
+        OUTPUT_DIR = sft_config_dict["output_dir"]
+
+    # If 'run_name' is not provided, compute a default run name.
+    if not sft_config_dict.get("run_name"):
+        sft_config_dict["run_name"] = f"train-{OUTPUT_DIR}"
+
+    # Create SFTConfig from the loaded configuration.
+    sft_config = SFTConfig(**sft_config_dict)
+
+    # Create LoRA configuration from the config file.
+    lora_config = LoraConfig(**config.get("lora_config", {}))
+
+    # Instantiate the trainer
     trainer = SFTTrainer(
             model=model,
             train_dataset=train_dataset,
             eval_dataset=test_dataset,
-            args=SFTConfig(
-                    per_device_train_batch_size=2,
-                    gradient_accumulation_steps=4,
-                    warmup_steps=100,
-                    max_steps=1000,
-                    learning_rate=0.0002,
-                    lr_scheduler_type="cosine",
-                    eval_strategy="steps",
-                    eval_steps=150,
-                    weight_decay=0.01,
-                    bf16=True,
-                    logging_strategy="steps",
-                    logging_steps=10,
-                    output_dir="./" + OUTPUT_DIR,
-                    optim="paged_adamw_8bit",
-                    seed=42,
-                    run_name=f"train-{OUTPUT_DIR}",
-                    report_to="wandb",
-                    save_steps=31,
-                    save_total_limit=4),
-            peft_config=LoraConfig(
-                    r=16,
-                    lora_alpha=32,
-                    lora_dropout=0.05,
-                    target_modules=['o_proj', 'k_proj', 'q_proj', "v_proj"],
-                    bias="none",
-                    task_type="CAUSAL_LM"
-                    ),
+            args=sft_config,
+            peft_config=lora_config,
             formatting_func=formatting_prompts_func,
             data_collator=collator,
             )
 
-    # Fine-Tune the model
+    # Fine-tune the model
     trainer.train()
 
-    # Optionally, you can save the fine-tuned LoRA adaptor:
-    trainer.model.save_pretrained(os.path.join(OUTPUT_DIR, "final_checkpoint"))
+    # Save the fine-tuned LoRA adaptor
+    final_checkpoint_dir = os.path.join(OUTPUT_DIR, "final_checkpoint")
+    trainer.model.save_pretrained(final_checkpoint_dir)
+
+    # Clean-up model and caches before merging.
     del model
     if is_torch_xpu_available():
         torch.xpu.empty_cache()
@@ -113,8 +140,14 @@ def main():
         torch.npu.empty_cache()
     else:
         torch.cuda.empty_cache()
+
+    # Load the adapter, merge it with the base model, and save the merged model.
     from peft import AutoPeftModelForCausalLM
-    model = AutoPeftModelForCausalLM.from_pretrained(OUTPUT_DIR, device_map="auto", torch_dtype=torch.bfloat16)
+    model = AutoPeftModelForCausalLM.from_pretrained(
+            OUTPUT_DIR,
+            device_map="auto",
+            torch_dtype=torch.bfloat16
+            )
     model = model.merge_and_unload()
 
     output_merged_dir = os.path.join(OUTPUT_DIR, "final_merged_checkpoint")

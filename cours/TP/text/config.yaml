@@ -1,0 +1,52 @@
+# config.yaml
+
+# Model and Checkpoint configuration
+checkpoint: "HuggingFaceTB/SmolLM2-135M-Instruct"
+
+# Dataset configuration
+dataset_name: "ChristianAzinn/json-training"
+train_test_split: 0.2
+random_seed: 42
+
+# Prompt templates
+templates:
+  response: "<|im_start|>assistant\n"
+  instruction: "<|im_start|>user\n"
+  prompt: "Query: {query}\n\nschema:\n{schema}"
+
+# Training (SFT) configuration
+sft_config:
+  per_device_train_batch_size: 2
+  gradient_accumulation_steps: 4
+  warmup_steps: 100
+  max_steps: 1000
+  learning_rate: 0.0002
+  lr_scheduler_type: "cosine"
+  eval_strategy: "steps"
+  eval_steps: 150
+  weight_decay: 0.01
+  bf16: true
+  logging_strategy: "steps"
+  logging_steps: 10
+  # If you wish to override the default output directory, change it here.
+  output_dir: "./SmolLM2-135M-Instruct-structure-output"
+  optim: "paged_adamw_8bit"
+  seed: 42
+  # The run name can be adjusted as needed.
+  run_name: "train-SmolLM2-135M-Instruct-structure-output"
+  report_to: "wandb"
+  save_steps: 31
+  save_total_limit: 4
+
+# LoRA configuration
+lora_config:
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules:
+    - "o_proj"
+    - "k_proj"
+    - "q_proj"
+    - "v_proj"
+  bias: "none"
+  task_type: "CAUSAL_LM"
