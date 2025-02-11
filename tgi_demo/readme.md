@@ -13,12 +13,7 @@ Avant de commencer, assurez-vous que votre serveur dispose des éléments suivan
 
 ## Étapes de mise en œuvre
 
-### 1. Préparation des données
-
-- Placez vos données dans un répertoire local qui sera monté par Docker.
-- Exemple de chemin local pour les données : `tgi-data`.
-
-### 2. Commande Docker pour démarrer TGI
+### 1. Commande Docker pour démarrer TGI
 
 Utilisez la commande suivante adaptée à vos besoins :
 
@@ -41,9 +36,11 @@ docker run -p 8080:80 \
 - `--model-id` : ID du modèle requis disponible sur Hugging Face.
 - `--validation-workers` : Définit le nombre d'instances de validation pour accélérer le déploiement.
 
+Plus options disponible ici: https://huggingface.co/docs/text-generation-inference/en/reference/launcher
+
 ---
 
-#### Exemple avec `curl`
+### 2. Exemple avec `curl`
 
 Une fois que le conteneur TGI est en cours d'exécution, vous pouvez interagir avec le modèle à l'aide de l'API exposée.
 
@@ -76,15 +73,3 @@ curl localhost:8080/v1/chat/completions \
 - Guide d'utilisation des GPU avec Docker : [Docker GPU Documentation](https://docs.docker.com/desktop/features/gpu/)
 
 ---
-
-### Notes importantes
-
-1. **Configuration spécifique au modèle** :
-    - Assurez-vous que le modèle spécifié dans `--model-id` est correctement nommé et existant sur la plateforme Hugging Face.
-2. **Accessibilité** :
-    - Le serveur sera accessible sur le port 8080 (http://<votre-adresse-ip>:8080).
-3. **Dépannage** :
-    - Vérifiez les logs Docker en cas de problème :
-      ```bash
-      docker logs <container_id>
-      ```
